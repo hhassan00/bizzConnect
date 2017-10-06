@@ -2,9 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+
+use Illuminate\Support\Facades\Session;
+
 use Illuminate\Http\Request;
 
 use App\Http\Requests\UsersRequest;
+
+use App\Http\Requests\UsersEditRequest;
 
 use App\Http\Requests;
 
@@ -51,6 +57,13 @@ class AdminUsersController extends Controller
     {
 
 
+        if (trim($request->password)=='') {
+            $input = $request->except('password');
+        }
+        else {
+            $input =$request->all();
+        }
+
         $input = $request->all();
         if ($file= $request->file('photo_id')) {
             $name = time().$file->getClientOriginalName();
@@ -66,7 +79,7 @@ class AdminUsersController extends Controller
         //     return "Photo Exist";
         // }
         // User::create($request->all());
-        // return redirect('admin/users');
+        return redirect('admin/users');
 
         //return $request->all();
     }
@@ -90,7 +103,13 @@ class AdminUsersController extends Controller
      */
     public function edit($id)
     {
-        return view('admin.users.edit');
+        $roles =Role::lists('name','id')->all();
+
+        $user = User::findOrFail($id);
+
+
+
+        return view('admin.users.edit', compact('user','roles'));
     }
 
     /**
@@ -100,9 +119,37 @@ class AdminUsersController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(UsersEditRequest $request, $iid)
     {
-        //
+        $users = User::find($iid);
+        //var_dump($iid);
+        // try {
+        // } catch (ModelNotFoundException $e) {
+        //     // dd(get_class_methods($e));
+        //     // dd($e);
+        //     //App::abort();
+        //     echo"solve ho mar ja";
+        // }
+        
+          if (trim($request->password)=='') {
+            $input = $request->except('password');
+        }
+        else {
+            $input =$request->all();
+        }
+
+        if ($file=$request->file('photo_id')) {            
+            $name = time().$file->getClientOriginalName();
+            $file->move('images',$name);
+            $photo = Photo::create(['file'=>$name]);
+            $input['photo_id']=$photo->id;
+        }
+
+        $input['password'] = bcrypt($request->password);
+
+        $users->update($input);
+
+        return redirect('/admin/users');
     }
 
     /**
@@ -113,6 +160,11 @@ class AdminUsersController extends Controller
      */
     public function destroy($id)
     {
-        //
+        $user=User::findOrFail($id);
+        unlink(public_path(). $user->photo->file);
+        $user->delete();
+
+        Session::flash('deleted_user', 'The user has been deleted');
+        return redirect('/admin/users');
     }
 }

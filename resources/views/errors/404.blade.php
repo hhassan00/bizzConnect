@@ -1,0 +1,1 @@
+<h1>Custom 404 page not found</h1>
